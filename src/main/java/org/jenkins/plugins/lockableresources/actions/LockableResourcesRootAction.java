@@ -125,7 +125,8 @@ public class LockableResourcesRootAction implements RootAction {
 		}
 
 		String userName = getUserName();
-		if (userName == null || !userName.equals(r.getReservedBy()))
+		if ((userName == null || !userName.equals(r.getReservedBy()))
+				&& !Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER))
 			throw new AccessDeniedException2(Jenkins.getAuthentication(),
 					RESERVE);
 
