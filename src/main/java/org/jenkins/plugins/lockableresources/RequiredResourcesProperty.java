@@ -28,16 +28,21 @@ import org.kohsuke.stapler.StaplerRequest;
 public class RequiredResourcesProperty extends JobProperty<Job<?, ?>> {
 
 	private final String resourceNames;
+	private final String labelName;
 	private final String resourceNamesVar;
 	private final String resourceNumber;
 
 	@DataBoundConstructor
-	public RequiredResourcesProperty(String resourceNames,
-			String resourceNamesVar, String resourceNumber) {
+	public RequiredResourcesProperty(
+			String resourceNames,
+			String resourceNamesVar,
+			String resourceNumber,
+			String labelName) {
 		super();
 		this.resourceNames = resourceNames;
 		this.resourceNamesVar = resourceNamesVar;
 		this.resourceNumber = resourceNumber;
+		this.labelName = labelName;
 	}
 
 	public String[] getResources() {
@@ -92,12 +97,15 @@ public class RequiredResourcesProperty extends JobProperty<Job<?, ?>> {
 			String resourceNumber = Util.fixEmptyAndTrim(json
 					.getString("resourceNumber"));
 
+			String labelName = Util.fixEmptyAndTrim(json
+					.getString("labelName"));
+
 			if (resourceNames == null) {
 				return null;
 			}
 
 			return new RequiredResourcesProperty(resourceNames,
-					resourceNamesVar, resourceNumber);
+					resourceNamesVar, resourceNumber, labelName);
 		}
 
 		public FormValidation doCheckResourceNames(@QueryParameter String value) {
@@ -129,6 +137,26 @@ public class RequiredResourcesProperty extends JobProperty<Job<?, ?>> {
 			}
 		}
 
+		public FormValidation doCheckLabelName(
+				@QueryParameter String value,
+				@QueryParameter String resourceNames) {
+			String label = Util.fixEmptyAndTrim(value);
+			String names = Util.fixEmptyAndTrim(resourceNames);
+			if (label == null) {
+				return FormValidation.ok();
+			} else if (names != null) {
+					return FormValidation.error(
+							"Only label or resources can be defined, not both.");				
+			} else {
+				if (LockableResourcesManager.get().isValidLabel(label)) {
+					return FormValidation.ok();
+				} else {
+					return FormValidation.error(
+							"The label does not exist: " + label);
+				}
+			}
+		}
+
 		public FormValidation doCheckResourceNumber(@QueryParameter String value,
 			@QueryParameter String resourceNames) {
 			String number = Util.fixEmptyAndTrim(value);
@@ -152,6 +180,22 @@ public class RequiredResourcesProperty extends JobProperty<Job<?, ?>> {
 					numResources));
 			}
 			return FormValidation.ok();
+		}
+
+		public AutoCompletionCandidates doAutoCompleteLabelName(
+			@QueryParameter String value) {
+			AutoCompletionCandidates c = new AutoCompletionCandidates();
+
+			value = Util.fixEmptyAndTrim(value);
+
+			if (value != null) {
+				for (String l : LockableResourcesManager.get().getAllLabels()) {
+					if (l.startsWith(value)) {
+						c.add(l);
+					}
+				}
+			}
+			return c;
 		}
 
 		public AutoCompletionCandidates doAutoCompleteResourceNames(
